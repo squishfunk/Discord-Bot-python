@@ -6,7 +6,8 @@ class Move(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command()
+    @commands.command(aliases=['m'])
+    @commands.has_permissions(kick_members=True)
     async def move(self, ctx, member: discord.Member=None, how_much=5):
         channel_name = 'AFK'
         nazwa = str(member.voice.channel)
