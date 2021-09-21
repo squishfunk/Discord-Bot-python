@@ -20,9 +20,11 @@ class Move(commands.Cog):
 
         for i in range(1,how_much):
             await member.move_to(channelToMove)
+            await asyncio.sleep(0.5)
             await member.move_to(channel)
+            await asyncio.sleep(0.5)
 
-        await member.move_to(channel)
+
 
 
 def setup(client):
