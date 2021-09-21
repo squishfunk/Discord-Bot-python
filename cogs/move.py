@@ -6,7 +6,8 @@ class Move(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.command()
+    @commands.command(aliases=['m'])
+    @commands.has_permissions(kick_members=True)
     async def move(self, ctx, member: discord.Member=None, how_much=5):
         channel_name = 'AFK'
         nazwa = str(member.voice.channel)
@@ -19,9 +20,11 @@ class Move(commands.Cog):
 
         for i in range(1,how_much):
             await member.move_to(channelToMove)
+            await asyncio.sleep(0.5)
             await member.move_to(channel)
+            await asyncio.sleep(0.5)
 
-        await member.move_to(channel)
+
 
 
 def setup(client):
