@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
 import youtube_dl
-import os
+import urllib.parse, urllib.request, re
+import validators
 
 class Music(commands.Cog):
 
@@ -9,36 +10,40 @@ class Music(commands.Cog):
         self.client = client
 
     @commands.command(aliases=["p"])
-    async def play(self, ctx, url : str):
-        song_there = os.path.isfile('song.mp3')
+    async def play(self, ctx, *, search):
+        if ctx.author.voice is None:
+            await ctx.send("Nie jesteś na kanale")
+        voice_channel = ctx.author.voice.channel
+        if ctx.voice_client is None:
+            await voice_channel.connect()
+        else:
+            await ctx.voice_client.move_to(voice_channel)
+
+        if not validators.url(search):
+            ##searching
+            query_string = urllib.parse.urlencode({
+                'search_query': search
+            })
+            htm_content = urllib.request.urlopen(
+                'http://www.youtube.com/results?' + query_string
+            )
+            search_results = re.findall(r"watch\?v=(\S{11})", htm_content.read().decode())
+            search = "http://www.youtube.com/watch?v=" + search_results[0]
+
+        FFMPEG_OPTION = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                         'options': '-vn'}
+        YDL_OPTIONS = {'format': 'bestaudio'}
+        vc = ctx.voice_client
+
         try:
-            if song_there:
-                os.remove('song.mp3')
-        except PermissionError:
-            await ctx.send('POCZEKAJ KURRRRRRRRRR')
-            return
-
-        #channel = ctx.message.author.voice.channel
-        voiceChannel = discord.utils.get(ctx.guild.voice_channels, name="BLACK CIRCLE 1")
-        vc = await voiceChannel.connect()
-        voice = discord.utils.get(self.client.voice_clients, guild=ctx.guild)
-
-
-
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality' : '192',
-            }],
-        }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        for file in os.listdir("./"):
-            if file.endswith('.mp3'):
-                os.rename(file, "song.mp3")
-        vc.play(discord.FFmpegPCMAudio('song.mp3'))
+            with youtube_dl.YoutubeDL(YDL_OPTIONS) as ydl:
+                info = ydl.extract_info(search, download=False)
+                url2 = info['formats'][0]['url']
+                source = await discord.FFmpegOpusAudio.from_probe(url2, **FFMPEG_OPTION)
+                vc.play(source)
+                await ctx.send('Teraz gram: ' + search)
+        except:
+            await ctx.send('Restrykcje wiekowe')
 
     @commands.command(aliases=["l"])
     async def leave(self, ctx):
@@ -65,7 +70,6 @@ class Music(commands.Cog):
             await ctx.send("Play audio")
         else:
             await ctx.send("Audio nie jest zatrzymane")
-
 
 def setup(client):
     client.add_cog(Music(client))
